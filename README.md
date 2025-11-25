@@ -121,28 +121,59 @@ if status:
 ---
 
 ### 5. Operações Digitais
-- **`buy_digital_spot(active, amount, action, duration)`**  
+- **`buy_digital_spot_v2(active, amount, action, duration)`**  
   Executa uma operação digital.
   - `active`: Nome do ativo.
   - `amount`: Valor da operação.
   - `action`: Direção (`"call"` ou `"put"`).
-  - `duration`: Duração em minutos.
+  - `duration`: Duração em minutos (1, 5, 15).
 
 - **`check_win_digital_v2(order_id)`**  
-  Verifica o resultado de uma operação digital.
+  Verifica se a ordem digital fechou e retorna o lucro.
+  Nota: Requer um loop de verificação (polling).
+
+- **`close_digital_option(order_id)`**
+  Vende a ordem digital antecipadamente.
 
 #### Exemplo:
 ```python
-status, order_id = api.buy_digital_spot("EURUSD", 1, "call", 1)
+import time
+
+status, order_id = api.buy_digital_spot_v2("EURUSD", 10, "put", 5)
+
 if status:
-    print("Ordem digital executada com sucesso!")
-    result = api.check_win_digital_v2(order_id)
-    print("Resultado:", result)
+    print("Ordem Digital executada:", order_id)
+    while True:
+        status_win, lucro = api.check_win_digital_v2(order_id)
+        if status_win:
+            print("Resultado Digital:", lucro)
+            break
+        time.sleep(1)
 ```
 
 ---
 
-### 6. Histórico e Velas
+### 6. Operações Blitz
+- **`buy_blitz(active, price, direction, expiration)`**
+  Executa operações rápidas (Blitz).
+
+- **`expiration`**
+  Tempo em segundos (ex: 5, 10, 30).
+
+- **`get_blitz_payout(active)`**
+  Retorna o payout atual para blitz.
+
+#### Exemplo:
+```python
+status, order_id = api.buy_blitz("EURUSD", 5, "call", 30) # 30 segundos
+if status:
+    print("Blitz iniciada!")
+    print(api.check_win_v4(order_id)) # Usa o mesmo check das binárias
+```
+
+---
+
+### 7. Histórico e Velas
 - **`get_candles(ACTIVES, interval, count, endtime)`**  
   Retorna o histórico de candles.
   - `ACTIVES`: Nome do ativo.
@@ -165,7 +196,25 @@ for candle in candles:
 
 ---
 
-### 7. Outros Métodos
+### 8. Ferramentas de Análise
+- **`get_technical_indicators(ACTIVES)`**
+  Retorna dados de indicadores técnicos (Médias Móveis, RSI, Bollinger, etc) calculados pela corretora.
+
+- **`get_traders_mood(ACTIVES)`**
+  Retorna o sentimento dos traders (porcentagem de compra vs venda).
+
+#### Exemplo:
+```python
+indicadores = api.get_technical_indicators("EURUSD")
+print(indicadores)
+
+sentimento = api.get_traders_mood("EURUSD")
+print(f"Sentimento de Mercado: {sentimento}")
+```
+
+---
+
+### 9. Outros Métodos
 - **`get_digital_payout(active, seconds=0)`**  
   Retorna o payout digital para um ativo.
 
@@ -179,4 +228,7 @@ for candle in candles:
 
 ## Notas
 - Certifique-se de que a conexão está ativa antes de executar qualquer operação.
-- Use `try-except` para capturar erros e garantir que o programa não seja interrompido inesperadamente.
+- Ativos OTC: Para operar em OTC, adicione "-OTC" ao nome do ativo (ex: "EURUSD-OTC").
+- Ativos OP: Para operar adicione "-op" ao nome do ativo (ex: "EURUSD-op").
+- Delay: Sempre utilize time.sleep em loops de verificação para evitar sobrecarga e desconexão da API.
+- Tratamento de Erros: Use blocos try-except ao fazer chamadas de rede para garantir estabilidade.
